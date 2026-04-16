@@ -2,40 +2,36 @@ document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     initRealTimeFeedback();
     initAnimations();
+    initPageFade();
 });
 
 // --- Theme Management ---
 function initTheme() {
-    const themeToggle = document.getElementById('theme-toggle');
+    const themeSwitch = document.getElementById('theme-switch');
     const savedTheme = localStorage.getItem('theme') || 'light';
     
     document.documentElement.setAttribute('data-theme', savedTheme);
-    updateThemeIcon(savedTheme);
 
-    if (themeToggle) {
-        themeToggle.addEventListener('click', () => {
+    if (themeSwitch) {
+        themeSwitch.addEventListener('click', () => {
             const currentTheme = document.documentElement.getAttribute('data-theme');
             const newTheme = currentTheme === 'light' ? 'dark' : 'light';
             
             document.documentElement.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
-            updateThemeIcon(newTheme);
+            
+            // The animated transition is handled by CSS based on data-theme
         });
     }
 }
 
-function updateThemeIcon(theme) {
-    const icon = document.querySelector('#theme-toggle i');
-    if (!icon) return;
-    icon.className = theme === 'light' ? 'ph-sun' : 'ph-moon';
-}
-
-// --- Real-Time Feedback ---
+// --- Real-Time Feedback (Live UX) ---
 function initRealTimeFeedback() {
     const text1 = document.getElementById('text1');
     const text2 = document.getElementById('text2');
     const progressBar = document.getElementById('real-time-progress');
     const progressText = document.getElementById('real-time-score');
+    const indicator = document.getElementById('typing-indicator');
 
     if (!text1 || !text2) return;
 
@@ -48,10 +44,13 @@ function initRealTimeFeedback() {
         if (val1.length === 0 || val2.length === 0) {
             progressBar.style.width = '0%';
             progressText.innerText = '0%';
+            indicator?.classList.remove('active');
             return;
         }
 
-        // Debounce to avoid excessive API calls
+        // Show typing indicator
+        indicator?.classList.add('active');
+
         clearTimeout(timeout);
         timeout = setTimeout(async () => {
             try {
@@ -64,40 +63,68 @@ function initRealTimeFeedback() {
                 
                 if (data.score !== undefined) {
                     progressBar.style.width = data.score + '%';
-                    animateCounter('real-time-score', data.score);
+                    animateCounter('real-time-score', data.score, 1000);
                 }
             } catch (err) {
-                console.error("Real-time analysis failed", err);
+                console.error("Real-time analysis failing", err);
+            } finally {
+                // Hide typing indicator after a short delay
+                setTimeout(() => indicator?.classList.remove('active'), 1000);
             }
-        }, 800);
+        }, 1200); // 1.2s debounce for "intelligence" feel
     };
 
     text1.addEventListener('input', runQuickAnalysis);
     text2.addEventListener('input', runQuickAnalysis);
 }
 
-// --- Counter Animation ---
-function animateCounter(id, target) {
+// --- Smooth Counter Animation (Animated Results) ---
+function animateCounter(id, target, duration = 1500) {
     const el = document.getElementById(id);
     if (!el) return;
     
-    let current = parseFloat(el.innerText || "0");
-    const step = (target - current) / 10;
+    let startTimestamp = null;
+    const startValue = parseFloat(el.innerText) || 0;
+    const finalValue = parseFloat(target);
     
-    const update = () => {
-        current += step;
-        if ((step > 0 && current >= target) || (step < 0 && current <= target)) {
-            el.innerText = target + '%';
-        } else {
-            el.innerText = Math.round(current) + '%';
-            requestAnimationFrame(update);
+    const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        
+        // Quad ease out for smoothness
+        const easedProgress = 1 - Math.pow(1 - progress, 3);
+        const current = startValue + (finalValue - startValue) * easedProgress;
+        
+        el.innerText = Math.round(current) + (id.includes('score') || id.includes('val') ? '%' : '');
+        
+        if (progress < 1) {
+            window.requestAnimationFrame(step);
         }
     };
     
-    requestAnimationFrame(update);
+    window.requestAnimationFrame(step);
 }
 
-// --- Basic Page Animations ---
+// --- Navigation Flow (SPA feel) ---
+function initPageFade() {
+    document.body.classList.add('page-transition');
+    
+    document.querySelectorAll('a').forEach(link => {
+        const href = link.getAttribute('href');
+        if (href && href.startsWith('/') && !href.startsWith('#') && !link.target) {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.body.style.opacity = '0';
+                document.body.style.transition = 'opacity 0.2s ease-in-out';
+                setTimeout(() => {
+                    window.location.href = href;
+                }, 200);
+            });
+        }
+    });
+}
+
+// --- General Animations ---
 function initAnimations() {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -107,25 +134,28 @@ function initAnimations() {
         });
     }, { threshold: 0.1 });
 
-    document.querySelectorAll('.card, .hero, .auth-card').forEach(el => {
+    document.querySelectorAll('.animate-on-scroll, .card, .hero').forEach(el => {
+        el.classList.add('animate-in'); // Fallback if observer not supported
         observer.observe(el);
     });
 }
 
-// --- API Actions ---
+// --- FULL ANALYSIS ACTION (Smart Feedback) ---
 async function analyzeFull() {
     const text1 = document.getElementById('text1').value;
     const text2 = document.getElementById('text2').value;
     const mode = document.getElementById('mode-selector')?.value || 'text';
 
     if (!text1 || !text2) {
-        alert("Please provide both documents.");
+        showFeedback("Please provide both documents.", "error");
         return;
     }
 
     const btn = document.getElementById('analyze-btn');
-    const originalText = btn.innerText;
-    btn.innerText = "Analyzing...";
+    const originalContent = btn.innerHTML;
+    
+    // Switch to "Analyzing..." state
+    btn.innerHTML = '<span>Analyzing</span><span class="dots"></span>';
     btn.disabled = true;
 
     try {
@@ -136,14 +166,24 @@ async function analyzeFull() {
         });
         const data = await response.json();
         
-        // Save to session storage for results page
-        sessionStorage.setItem('plagix_results', JSON.stringify(data));
-        window.location.href = '/results';
+        // Show success delighter
+        btn.innerHTML = '<i class="ph-bold ph-check"></i> Analysis Complete';
+        btn.classList.add("success");
+        
+        setTimeout(() => {
+            sessionStorage.setItem('plagix_results', JSON.stringify(data));
+            window.location.href = '/results';
+        }, 800);
+        
     } catch (err) {
         console.error(err);
-        alert("Something went wrong.");
-    } finally {
-        btn.innerText = originalText;
+        btn.innerHTML = originalContent;
         btn.disabled = false;
+        showFeedback("Failed to connect to engine.", "error");
     }
+}
+
+function showFeedback(msg, type) {
+    // Simple toast fallback if needed
+    alert(msg);
 }

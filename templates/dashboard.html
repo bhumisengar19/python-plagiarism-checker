@@ -37,15 +37,19 @@
                 </div>
             </div>
 
-            <div class="card mt-4">
-                <div class="flex justify-between items-center" style="margin-bottom: 0.5rem;">
-                    <span style="font-size: 0.9rem; font-weight: 600;">Real-time Index</span>
-                    <span id="real-time-score" style="font-size: 0.9rem; font-weight: 700; color: var(--accent);">0%</span>
+            <div class="card mt-4 animate-in">
+                <div class="flex justify-between items-center" style="margin-bottom: 0.75rem;">
+                    <span style="font-size: 0.95rem; font-weight: 700;">Real-time Index</span>
+                    <span id="real-time-score" style="font-size: 0.95rem; font-weight: 800; color: var(--accent);">0%</span>
                 </div>
                 <div class="progress-container">
                     <div id="real-time-progress" class="progress-bar"></div>
                 </div>
-                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Dynamic scoring updates as you refine your text.</p>
+                <div id="typing-indicator" class="typing-indicator">
+                    <i class="ph-bold ph-lightning"></i>
+                    <span>Updating Similarity Metric</span><span class="dots"></span>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 1rem;">Dynamic scoring follows your text structure as you write.</p>
             </div>
         </section>
     </div>
