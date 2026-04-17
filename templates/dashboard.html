@@ -76,19 +76,28 @@
                 </div>
 
                 <!-- Main Result -->
-                <div class="card" style="display: flex; align-items: center; justify-content: space-between; padding: 2rem;">
-                    <div>
-                        <p style="font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">Overall Similarity</p>
-                        <h2 style="font-size: 4rem; font-weight: 800; line-height: 1; margin: 0; color: var(--text);"><span id="bigScore">0</span>%</h2>
-                        <p id="resultStatus" style="font-weight: 600; font-size: 1.1rem; margin-top: 8px; color: var(--text-muted);">Analyzing...</p>
-                        <!-- AI Explanation Banner -->
-                        <p id="explainSimilarityText" style="font-size: 13px; color: var(--text-muted); font-style: italic; margin-top: 12px;"></p>
+                <div class="card" style="display: flex; align-items: center; justify-content: space-between; padding: 2.5rem; position: relative; overflow: hidden;">
+                    <div style="z-index: 2;">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                            <p style="font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin: 0;">Overall Similarity</p>
+                            <span id="riskBadge" style="padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; text-transform: uppercase;">Low Risk</span>
+                        </div>
+                        <h2 style="font-size: 5rem; font-weight: 800; line-height: 1; margin: 0; color: var(--text);"><span id="bigScore">0</span>%</h2>
+                        <div style="display: flex; align-items: center; gap: 16px; margin-top: 12px;">
+                            <p id="resultStatus" style="font-weight: 600; font-size: 1.1rem; margin: 0; color: var(--text-muted);">Analyzing...</p>
+                            <span id="confidenceBadge" style="font-size: 13px; color: var(--text-muted);">Confidence: <strong id="confidenceVal">--</strong></span>
+                        </div>
                     </div>
-                    <!-- Progress Bar -->
-                    <div style="width: 100%; max-width: 400px; height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; margin: 0 auto;">
-                    <div id="scoreBar" style="width: 0%; height: 100%; background: var(--text); border-radius: 999px; transition: width 1.5s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.5s;"></div>
+                    <!-- Progress Bar (Vertical/Circular feel) -->
+                    <div style="width: 12px; height: 120px; background: var(--border); border-radius: 999px; overflow: hidden; position: relative;">
+                        <div id="scoreBar" style="position: absolute; bottom: 0; width: 100%; height: 0%; background: var(--text); transition: height 1.5s cubic-bezier(0.2, 0.8, 0.2, 1);"></div>
+                    </div>
                 </div>
-            </div>
+
+                <!-- AI Reasoning Card -->
+                <div class="card" style="padding: 1.5rem 2rem; background: rgba(59, 130, 246, 0.05); border-left: 4px solid #3b82f6;">
+                    <p id="explainSimilarityText" style="color: var(--text); font-size: 15px; font-weight: 500; line-height: 1.6; margin: 0;"></p>
+                </div>
 
             <!-- Multi-Algorithm Engine Breakdown -->
             <div class="card" style="padding: 1.5rem 2rem;">
@@ -144,6 +153,15 @@
                         <div id="phraseList" style="display: flex; flex-direction: column; gap: 12px; font-size: 13px;">
                             <!-- Auto Populated -->
                         </div>
+                    </div>
+                </div>
+
+                <!-- NEW: Side-by-Side Diff Comparison -->
+                <div class="card" style="padding: 1.5rem 2rem;">
+                    <p style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1.5rem;">Visual Diff Comparison</p>
+                    <div id="diffContainer" style="width: 100%; overflow-x: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
+                        <!-- Auto Populated Table -->
+                        <p style="color: var(--text-muted); font-style: italic; text-align: center; font-size: 13px;">No diff data generated yet.</p>
                     </div>
                 </div>
 

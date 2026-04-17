@@ -1,4 +1,6 @@
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, redirect
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
 import re
 import time
 import difflib
@@ -25,6 +27,18 @@ stop_words = set(stopwords.words('english'))
 
 app = Flask(__name__)
 app.secret_key = 'plagix_super_secret_dev_key'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///plagix.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(150), unique=True, nullable=False)
+    password_hash = db.Column(db.String(250), nullable=False)
+
+with app.app_context():
+    db.create_all()
 
 # --- Plagiarism Logic ---
 
@@ -161,8 +175,55 @@ def get_similarity_report(text1, text2):
     if ast1 and ast2:
         code_match = round(calculate_levenshtein(ast1, ast2) * 100)
 
+    # --- NEW INTELLIGENCE FEATURES ---
+    
+    # 1. AI Reasoning Explanation
+    explanation = ""
+    if overall_score > 0.75:
+        explanation = "Critical similarity. Large sections of text appear copied directly, with significant structural overlap."
+    elif cosine > 0.6 and jaccard < 0.4:
+        explanation = "High structural similarity detected. The ideas and sentence order are very similar, even if words were slightly changed."
+    elif jaccard > 0.6:
+        explanation = "High word overlap. Many phrases and specific terms are reused directly from the source."
+    elif overall_score > 0.4:
+        explanation = "Moderate similarity. Significant paraphrasing detected or common industrial language used."
+    else:
+        explanation = "Low similarity. Content appears original with only generic phrase matches."
+
+    # 2. Confidence Score
+    # Agreement between algorithms increases confidence
+    std_dev = np.std([cosine, jaccard, levenshtein])
+    if std_dev < 0.1: confidence = "High"
+    elif std_dev < 0.25: confidence = "Medium"
+    else: confidence = "Low"
+
+    # 3. Risk Level
+    risk_level = "Low Risk"
+    risk_color = "#10b981"
+    if overall_score > 0.8: 
+        risk_level = "Critical"
+        risk_color = "#991b1b"
+    elif overall_score > 0.6: 
+        risk_level = "High Risk"
+        risk_color = "#ef4444"
+    elif overall_score > 0.3: 
+        risk_level = "Medium Risk"
+        risk_color = "#f59e0b"
+
+    # 4. Side-by-Side HTML Diff (GitHub Style)
+    s1_lines = text1.splitlines()
+    s2_lines = text2.splitlines()
+    diff_gen = difflib.HtmlDiff()
+    html_diff = diff_gen.make_table(s1_lines, s2_lines, context=True, numlines=3)
+
     return {
         "overall_score": overall_score * 100,
+        "risk": {
+            "level": risk_level,
+            "color": risk_color,
+            "reasoning": explanation,
+            "confidence": confidence
+        },
         "metrics": {
             "cosine": cosine * 100,
             "jaccard": jaccard * 100,
@@ -175,6 +236,7 @@ def get_similarity_report(text1, text2):
             "time_ms": round(process_time * 1000),
             "code_structural_match": code_match
         },
+        "diff": html_diff,
         "highlights": {
             "text1": t1_highlighted,
             "text2": t2_highlighted
@@ -189,7 +251,7 @@ def get_similarity_report(text1, text2):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', is_index=True)
 
 @app.route('/auth')
 def auth():
@@ -199,11 +261,19 @@ def auth():
 def dashboard():
     return render_template('dashboard.html')
 
+@app.route('/profile')
+def profile():
+    if not session.get('logged_in'):
+        return redirect('/auth')
+        
+    user = User.query.get(session.get('user_id'))
+    return render_template('profile.html', user=user)
+
 @app.route('/calculate', methods=['POST'])
 def calculate():
     if not session.get('logged_in'):
         session['usage_count'] = session.get('usage_count', 0) + 1
-        if session['usage_count'] > 5:
+        if session['usage_count'] > 10:
             return jsonify({"error": "limit_reached"})
 
     data = request.json
@@ -218,7 +288,7 @@ def calculate():
     if not session.get('logged_in'):
         report['usage'] = {
             'checks_used': session['usage_count'],
-            'checks_limit': 5
+            'checks_limit': 10
         }
         
     return jsonify(report)
@@ -228,6 +298,47 @@ def login_bypass():
     session['logged_in'] = True
     session['usage_count'] = 0
     return jsonify({"status": "success"})
+
+@app.route('/api/signup', methods=['POST'])
+def api_signup():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    
+    if not email or not password:
+        return jsonify({"error": "Missing credentials"}), 400
+        
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "Account already exists"}), 400
+        
+    new_user = User(email=email, password_hash=generate_password_hash(password))
+    db.session.add(new_user)
+    db.session.commit()
+    
+    session['logged_in'] = True
+    session['user_id'] = new_user.id
+    session['usage_count'] = 0
+    return jsonify({"success": True})
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    
+    user = User.query.filter_by(email=email).first()
+    if user and check_password_hash(user.password_hash, password):
+        session['logged_in'] = True
+        session['user_id'] = user.id
+        session['usage_count'] = 0
+        return jsonify({"success": True})
+        
+    return jsonify({"error": "Invalid email or password"}), 401
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/')
 
 @app.route('/extract_text', methods=['POST'])
 def extract_text():

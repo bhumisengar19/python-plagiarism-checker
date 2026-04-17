@@ -61,8 +61,6 @@
                 <span class="brand-name">PLAGIX</span>
             </a>
             <div style="display: flex; gap: 2rem; align-items: center;">
-                <a href="/dashboard" style="text-decoration: none; color: var(--text); font-weight: 500; font-size: 14px;">Dashboard</a>
-                
                 <!-- Luxury Premium Theme Toggle -->
                 <div class="premium-toggle" onclick="toggleTheme()" title="Switch Environment">
                     <div class="toggle-knob">
@@ -85,7 +83,13 @@
                     </div>
                 </div>
                 
-                <a href="/auth" class="btn btn-magnetic">Sign In</a>
+                {% if session.logged_in %}
+                    {% if not is_index %}
+                        <a href="/profile" class="btn btn-secondary" style="background: transparent; border-color: var(--text); color: var(--text); text-decoration: none;">Account Settings</a>
+                    {% endif %}
+                {% else %}
+                    <a href="/auth" class="btn btn-magnetic" style="text-decoration: none;">Sign In</a>
+                {% endif %}
             </div>
         </nav>
 

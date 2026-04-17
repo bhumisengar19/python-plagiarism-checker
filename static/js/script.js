@@ -248,6 +248,35 @@ async function runSmartAnalysis() {
         
         const data = await response.json();
         
+        // Quota Guard Condition
+        if (data.error === 'limit_reached') {
+            showModal();
+            btn.disabled = false;
+            btnText.innerText = "Analyze Similarity";
+            btn.style.opacity = '1';
+            return;
+        }
+
+        // Warning Label Generator
+        if (data.usage) {
+            const usageEl = document.getElementById('usageIndicator');
+            const used = data.usage.checks_used;
+            const limit = data.usage.checks_limit;
+            usageEl.style.opacity = '1';
+            
+            if (used === limit - 1) {
+                usageEl.innerText = `1 free check remaining.`;
+                usageEl.style.color = '#ef4444';
+                usageEl.style.background = 'rgba(239, 68, 68, 0.1)';
+            } else if (used === limit) {
+                usageEl.innerText = `Last free check used!`;
+                usageEl.style.color = '#ef4444';
+                usageEl.style.background = 'rgba(239, 68, 68, 0.1)';
+            } else {
+                usageEl.innerText = `${used}/${limit} free checks used`;
+            }
+        }
+        
         // Reveal Results
         resultsContainer.style.display = 'flex';
         
@@ -255,29 +284,31 @@ async function runSmartAnalysis() {
         const targetScore = Math.round(data.overall_score);
         animateValue("bigScore", 0, targetScore, 1000);
         
-        // Progress Bar
+        // Progress Bar (Vertical Height Update)
         const bar = document.getElementById('scoreBar');
         requestAnimationFrame(() => {
-            bar.style.width = `${targetScore}%`;
-            bar.style.backgroundColor = targetScore > 75 ? '#ef4444' : targetScore > 40 ? '#f59e0b' : '#10b981';
+            bar.style.height = `${targetScore}%`;
+            bar.style.backgroundColor = data.risk.color;
         });
 
-        // Status Text & Explanation Feature
+        // Risk & Confidence Badges
+        const riskEl = document.getElementById('riskBadge');
+        riskEl.innerText = data.risk.level;
+        riskEl.style.backgroundColor = `${data.risk.color}20`; // 20% alpha
+        riskEl.style.color = data.risk.color;
+
+        document.getElementById('confidenceVal').innerText = data.risk.confidence;
+
+        // Status Text & AI Reasoning
         const statusEl = document.getElementById('resultStatus');
         const explainEl = document.getElementById('explainSimilarityText');
-        if (targetScore > 75) {
-            statusEl.innerText = "High Plagiarism Match";
-            statusEl.style.color = '#ef4444';
-            explainEl.innerText = "High similarity due to significant structural copying and repeated contiguous phrases.";
-        } else if (targetScore > 40) {
-            statusEl.innerText = "Moderate Match Found";
-            statusEl.style.color = '#f59e0b';
-            explainEl.innerText = "Moderate similarity. Content appears partially paraphrased or heavily inspired.";
-        } else {
-            statusEl.innerText = "Low Similarity - Safe";
-            statusEl.style.color = '#10b981';
-            explainEl.innerText = "Low likelihood of plagiarism. Only generic phrase overlaps detected.";
-        }
+        
+        statusEl.innerText = targetScore > 40 ? "Match Found" : "Safe - Low Match";
+        statusEl.style.color = data.risk.color;
+        explainEl.innerText = data.risk.reasoning;
+
+        // Populate HTML Diff Comparison
+        document.getElementById('diffContainer').innerHTML = data.diff;
 
         // Code Structural Analysis Activation
         const astAlert = document.getElementById('codeStructureAlert');
@@ -336,7 +367,7 @@ async function runSmartAnalysis() {
         hl1.addEventListener('scroll', () => { hl2.scrollTop = hl1.scrollTop; });
         hl2.addEventListener('scroll', () => { hl1.scrollTop = hl2.scrollTop; });
         
-        document.getElementById('quickStatusLine').innerText = "Scan Complete";
+
 
         // Save Session to User History (Real-world Usability Feature)
         const hist = JSON.parse(localStorage.getItem('plagix_history')) || [];
@@ -344,7 +375,8 @@ async function runSmartAnalysis() {
             date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString(),
             score: targetScore,
             words: data.insights.word_count,
-            timeMs: data.insights.time_ms
+            timeMs: data.insights.time_ms,
+            snippet: t2.value.substring(0, 60) + '...'
         });
         localStorage.setItem('plagix_history', JSON.stringify(hist.slice(0, 10))); // keep top 10
         renderHistory();
@@ -369,15 +401,17 @@ function renderHistory() {
         return;
     }
     
-    historyGrid.innerHTML = hist.map((h, i) => `
-        <div style="background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <p style="font-weight: 700; color: var(--text); font-size: 15px;">Session Record #${hist.length - i}</p>
-                <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Scanned ${h.words} words at ${h.date}</p>
+    historyGrid.innerHTML = hist.map(h => `
+        <div class="card" style="padding: 1.25rem; border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--text-muted);">${h.date}</span>
+                <span style="font-size: 13px; font-weight: 800; color: ${h.score > 75 ? '#ef4444' : h.score > 40 ? '#f59e0b' : '#10b981'};">${h.score}%</span>
             </div>
-            <div style="text-align: right;">
-                <p style="font-size: 20px; font-weight: 800; color: ${h.score > 75 ? '#ef4444' : h.score > 40 ? '#f59e0b' : '#10b981'};">${h.score}%</p>
-                <p style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Match</p>
+            <p style="font-size: 13px; color: var(--text); font-weight: 500; margin-bottom: 8px;">"${h.snippet}"</p>
+            <div style="display: flex; gap: 12px; font-size: 11px; color: var(--text-muted); font-weight: 600;">
+                <span>${h.words} Words</span>
+                <span>•</span>
+                <span>${h.timeMs}ms</span>
             </div>
         </div>
     `).join('');

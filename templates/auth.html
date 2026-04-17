@@ -5,37 +5,95 @@
     <div class="card" style="width: 100%; max-width: 420px; padding: 32px; display: flex; flex-direction: column;">
         <!-- Header -->
         <div style="text-align: center; margin-bottom: 24px;">
-            <h2 style="font-size: 1.75rem; font-weight: 800; letter-spacing: -0.04em; margin-bottom: 8px; color: var(--text);">Sign in to PLAGIX</h2>
-            <p style="font-size: 14px; color: var(--text-muted);">Enter your credentials to manage reports.</p>
+            <h2 id="authTitle" style="font-size: 1.75rem; font-weight: 800; letter-spacing: -0.04em; margin-bottom: 8px; color: var(--text);">Sign in to PLAGIX</h2>
+            <p id="authSubtitle" style="font-size: 14px; color: var(--text-muted);">Enter your credentials to manage reports.</p>
         </div>
 
+        <!-- Dynamic Error Banner -->
+        <div id="errorBanner" style="display: none; background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; font-weight: 600; text-align: center;"></div>
+
         <!-- Form -->
-        <form onsubmit="event.preventDefault(); window.location.href='/dashboard';" style="display: flex; flex-direction: column; gap: 18px;">
+        <form id="authForm" style="display: flex; flex-direction: column; gap: 18px;">
             <div style="display: flex; flex-direction: column;">
                 <label>Email address</label>
-                <input type="email" placeholder="name@company.com" required style="width: 100%;">
+                <input type="email" id="emailInput" placeholder="name@company.com" required style="width: 100%;">
             </div>
             
             <div style="display: flex; flex-direction: column;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                     <label style="margin-bottom: 0;">Password</label>
-                    <a href="#" style="font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500;">Forgot password?</a>
+                    <a href="#" id="forgotBtn" style="font-size: 12px; color: #3b82f6; text-decoration: none; font-weight: 500;">Forgot password?</a>
                 </div>
-                <input type="password" placeholder="••••••••" required style="width: 100%;">
+                <input type="password" id="passwordInput" placeholder="••••••••" required style="width: 100%;">
             </div>
 
-            <button type="submit" class="btn btn-magnetic" style="width: 100%; margin-top: 12px;">Sign In</button>
+            <button type="submit" id="submitBtn" class="btn btn-magnetic" style="width: 100%; margin-top: 12px; background: #3b82f6; color: white;">Sign In</button>
         </form>
 
         <!-- Divider -->
         <div style="margin: 24px 0; border-top: 1px solid var(--border);"></div>
 
-        <!-- Footer -->
+        <!-- Footer Toggle -->
         <div style="text-align: center; margin-top: 16px;">
             <p style="font-size: 13px; color: var(--text-muted);">
-                Don't have an account? <a href="#" style="color: var(--accent); text-decoration: none; font-weight: 600;">Create account</a>
+                <span id="footerText">Don't have an account?</span> 
+                <a href="#" id="toggleAuthMode" style="color: #3b82f6; text-decoration: none; font-weight: 600;">Create account</a>
             </p>
         </div>
     </div>
 </div>
+
+<script>
+    let isLoginMode = true;
+
+    document.getElementById('toggleAuthMode').addEventListener('click', (e) => {
+        e.preventDefault();
+        isLoginMode = !isLoginMode;
+        
+        document.getElementById('authTitle').innerText = isLoginMode ? "Sign in to PLAGIX" : "Create an Account";
+        document.getElementById('authSubtitle').innerText = isLoginMode ? "Enter your credentials to manage reports." : "Start checking documents instantly.";
+        document.getElementById('submitBtn').innerText = isLoginMode ? "Sign In" : "Sign Up";
+        document.getElementById('footerText').innerText = isLoginMode ? "Don't have an account?" : "Already have an account?";
+        document.getElementById('toggleAuthMode').innerText = isLoginMode ? "Create account" : "Sign in";
+        document.getElementById('forgotBtn').style.display = isLoginMode ? "block" : "none";
+        document.getElementById('errorBanner').style.display = 'none';
+    });
+
+    document.getElementById('authForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('emailInput').value;
+        const password = document.getElementById('passwordInput').value;
+        const errorBanner = document.getElementById('errorBanner');
+        const submitBtn = document.getElementById('submitBtn');
+
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Authenticating...";
+        errorBanner.style.display = 'none';
+
+        try {
+            const endpoint = isLoginMode ? '/api/login' : '/api/signup';
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                window.location.href = '/dashboard';
+            } else {
+                errorBanner.innerText = data.error || "Authentication failed.";
+                errorBanner.style.display = 'block';
+                submitBtn.innerText = isLoginMode ? "Sign In" : "Sign Up";
+                submitBtn.disabled = false;
+            }
+        } catch (err) {
+            errorBanner.innerText = "Network Error. Please try again.";
+            errorBanner.style.display = 'block';
+            submitBtn.innerText = isLoginMode ? "Sign In" : "Sign Up";
+            submitBtn.disabled = false;
+        }
+    });
+</script>
 {% endblock %}

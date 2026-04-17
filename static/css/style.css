@@ -3,6 +3,7 @@
 :root {
     /* Theme Colors - Light (Day) */
     --bg-sky: linear-gradient(to bottom, #7dd3fc 0%, #e0f2fe 100%);
+    --bg: #ffffff;
     --bg-content: transparent;
     --text: #0f172a;
     --text-muted: #64748b;
@@ -46,6 +47,7 @@
 [data-theme="dark"] {
     /* Theme Colors - Dark (Night) */
     --bg-sky: linear-gradient(to bottom, #020617 0%, #0f172a 100%);
+    --bg: #020617;
     --text: #f8fafc;
     --text-muted: #94a3b8;
     --card: rgba(15, 23, 42, 0.7); /* Subtle Glass */
@@ -247,6 +249,10 @@ body {
     z-index: 100;
 }
 
+.page-content {
+    padding-top: 72px !important;
+}
+
 .card {
     background: var(--card);
     backdrop-filter: blur(12px);
@@ -338,12 +344,13 @@ body {
 }
 
 .sidebar-link.active {
-    color: var(--text);
-    font-weight: 600;
-    border-left: 2px solid var(--text);
-    background: rgba(0,0,0,0.02);
+    color: #ffffff !important;
+    font-weight: 700;
+    background: #3b82f6 !important;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    transform: translateX(4px);
 }
-[data-theme="dark"] .sidebar-link.active { background: rgba(255,255,255,0.02); }
+[data-theme="dark"] .sidebar-link.active { background: #3b82f6 !important; }
 
 .main-view {
     margin-left: 220px;
@@ -674,3 +681,16 @@ textarea:focus, input:focus {
     0%, 100% { opacity: 0.3; }
     50% { opacity: 1; }
 }
+
+/* --- GitHub Style Diff Comparison --- */
+.diff { border-collapse: collapse; width: 100%; font-family: 'Inter', monospace; font-size: 13px; }
+.diff_header { background-color: var(--border) !important; color: var(--text-muted); padding: 4px 8px; text-align: right; user-select: none; width: 40px; }
+.diff_next { display: none; }
+.diff_add { background-color: rgba(16, 185, 129, 0.2) !important; text-decoration: none; }
+.diff_chg { background-color: rgba(245, 158, 11, 0.2) !important; text-decoration: none; }
+.diff_sub { background-color: rgba(239, 68, 68, 0.2) !important; text-decoration: none; }
+.diff td { padding: 8px 12px; border: 1px solid var(--border); color: var(--text); }
+[data-theme="dark"] .diff_add { background-color: rgba(16, 185, 129, 0.15) !important; }
+[data-theme="dark"] .diff_sub { background-color: rgba(239, 68, 68, 0.15) !important; }
+[data-theme="dark"] .diff_chg { background-color: rgba(245, 158, 11, 0.15) !important; }
+

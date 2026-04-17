@@ -48,12 +48,21 @@
 .hero-btn-secondary {
     padding: 14px 32px; 
     font-size: 16px; 
-    border: 1px solid var(--border); 
+    font-weight: 600;
+    color: var(--text);
+    border: 2px solid var(--text); 
     background: transparent;
-    transition: background-color 0.2s ease;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.2s ease, color 0.2s ease;
 }
 .hero-btn-secondary:hover {
-    background: var(--card);
+    background: var(--text) !important;
+    color: var(--bg) !important;
+    transform: scale(1.03);
 }
 </style>
 
