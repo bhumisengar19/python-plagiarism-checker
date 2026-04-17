@@ -403,7 +403,7 @@ textarea:focus, input:focus {
 .stat-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
 .stat-val { font-size: 20px; font-weight: 800; color: var(--text); }
 
-/* Highlight System */
+/* Heatmap Highlight System */
 .highlight-box {
     background: var(--card);
     border: 1px solid var(--border);
@@ -418,36 +418,67 @@ textarea:focus, input:focus {
 }
 
 .match-highlight {
-    background: rgba(239, 68, 68, 0.15); /* Soft Red */
     border-radius: 4px;
     padding: 0 4px;
     transition: background 0.2s ease;
     cursor: default;
+    font-weight: 500;
 }
 
-.match-highlight:hover { background: rgba(239, 68, 68, 0.3); }
+/* Heatmap Tiers */
+.high-match { background: rgba(239, 68, 68, 0.25); color: #991b1b; } /* Dark Red */
+.high-match:hover { background: rgba(239, 68, 68, 0.4); }
 
-[data-theme="dark"] .match-highlight {
-    background: rgba(248, 113, 113, 0.2);
-}
-[data-theme="dark"] .match-highlight:hover { background: rgba(248, 113, 113, 0.4); }
+.mid-match { background: rgba(245, 158, 11, 0.25); color: #92400e; } /* Amber */
+.mid-match:hover { background: rgba(245, 158, 11, 0.4); }
+
+.low-match { background: rgba(56, 189, 248, 0.25); color: #075985; } /* Light Blue */
+.low-match:hover { background: rgba(56, 189, 248, 0.4); }
+
+/* Dark Mode Adjustments */
+[data-theme="dark"] .high-match { background: rgba(248, 113, 113, 0.3); color: #fca5a5; }
+[data-theme="dark"] .mid-match { background: rgba(251, 191, 36, 0.3); color: #fde68a; }
+[data-theme="dark"] .low-match { background: rgba(56, 189, 248, 0.3); color: #bae6fd; }
 
 /* --- Luxury Premium Toggle (Dribbble Highlight) --- */
 .premium-toggle {
-    width: 76px;
-    height: 38px;
-    border-radius: 999px;
-    position: relative;
-    cursor: pointer;
-    background: linear-gradient(to bottom, #7dd3fc, #bae6fd); /* Day */
-    transition: background 0.5s ease;
-    overflow: hidden;
-    padding: 4px;
-    box-shadow: inset 0 3px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.05);
+    display: inline-flex;
+    align-items: center;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
-[data-theme="dark"] .premium-toggle {
-    background: linear-gradient(to bottom, #0f172a, #1e293b); /* Night */
+.premium-toggle button {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 99px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.premium-toggle button.active {
+    background: var(--text);
+    color: var(--bg);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* --- PDF Export Format --- */
+@media print {
+    body { background: white !important; color: black !important; }
+    .top-navbar, .sidebar-nav, #inputSection, .drag-drop-zone, .premium-toggle, button { display: none !important; }
+    .main-view-container { margin: 0; padding: 0 !important; border: none; }
+    .card { box-shadow: none !important; border: 1px solid #ccc !important; padding: 1rem !important; page-break-inside: avoid; }
+    .high-match { background: #fecaca !important; color: #991b1b !important; }
+    .mid-match { background: #fde68a !important; color: #92400e !important; }
+    .low-match { background: #bae6fd !important; color: #075985 !important; }
+    * { animation: none !important; transition: none !important; }
 }
 
 /* Sliding Knob (Sun/Moon) */

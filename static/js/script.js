@@ -116,7 +116,7 @@ const t1 = document.getElementById('text1');
 const t2 = document.getElementById('text2');
 const indicator = document.getElementById('typingIndicator');
 const btn = document.getElementById('analyzeBtn');
-const btnText = document.getElementById('btnText');
+const btnText = document.getElementById('analyzeBtnText');
 const resultsContainer = document.getElementById('resultsContainer');
 
 // 1. Live Feedback (Debounced)
@@ -154,22 +154,39 @@ const dropZone = document.getElementById('dropZone');
 const fileUpload = document.getElementById('fileUpload');
 
 // Shared File Processor
-function processFiles(fileList) {
-    const files = Array.from(fileList).filter(f => f.type.startsWith('text/') || f.name.endsWith('.md') || f.name.endsWith('.py'));
+async function processFiles(fileList) {
+    // Collect up to top 2 files
+    const files = Array.from(fileList).slice(0, 2);
+    if (!files.length) return;
     
-    if (files.length > 0) {
-        const reader1 = new FileReader();
-        reader1.onload = (event) => { t1.value = event.target.result; showIndicator(); setTimeout(doneTyping, doneTypingInterval); };
-        reader1.readAsText(files[0]);
+    indicator.style.opacity = '1';
+    indicator.innerText = 'Extracting document data...';
+    
+    try {
+        const uploadFile = async (file) => {
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await fetch('/extract_text', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+            return data.text;
+        };
         
-        if (files.length > 1) {
-            const reader2 = new FileReader();
-            reader2.onload = (event) => { t2.value = event.target.result; };
-            reader2.readAsText(files[1]);
+        if (files[0]) {
+            t1.value = await uploadFile(files[0]);
+        }
+        if (files[1]) {
+            t2.value = await uploadFile(files[1]);
         }
         
-        indicator.style.opacity = '1';
         indicator.innerText = 'Files Loaded';
+        showIndicator(); 
+        setTimeout(doneTyping, doneTypingInterval);
+        
+    } catch(err) {
+        alert("Failed to parse file: " + err.message);
+        indicator.innerText = 'Parse Error';
+    } finally {
         setTimeout(() => indicator.style.opacity = '0', 2000);
     }
 }
@@ -221,7 +238,6 @@ async function runSmartAnalysis() {
     btn.disabled = true;
     btnText.innerText = "Analyzing document...";
     btn.style.opacity = '0.7';
-    document.getElementById('quickStatusLine').innerText = "Running environment scan...";
     
     try {
         const response = await fetch('/calculate', {
@@ -246,18 +262,34 @@ async function runSmartAnalysis() {
             bar.style.backgroundColor = targetScore > 75 ? '#ef4444' : targetScore > 40 ? '#f59e0b' : '#10b981';
         });
 
-        // Status Text
+        // Status Text & Explanation Feature
         const statusEl = document.getElementById('resultStatus');
+        const explainEl = document.getElementById('explainSimilarityText');
         if (targetScore > 75) {
             statusEl.innerText = "High Plagiarism Match";
             statusEl.style.color = '#ef4444';
+            explainEl.innerText = "High similarity due to significant structural copying and repeated contiguous phrases.";
         } else if (targetScore > 40) {
             statusEl.innerText = "Moderate Match Found";
             statusEl.style.color = '#f59e0b';
+            explainEl.innerText = "Moderate similarity. Content appears partially paraphrased or heavily inspired.";
         } else {
             statusEl.innerText = "Low Similarity - Safe";
             statusEl.style.color = '#10b981';
+            explainEl.innerText = "Low likelihood of plagiarism. Only generic phrase overlaps detected.";
         }
+
+        // Code Structural Analysis Activation
+        const astAlert = document.getElementById('codeStructureAlert');
+        if (data.insights.code_structural_match !== null) {
+            astAlert.style.display = 'block';
+            document.getElementById('codeStructureScore').innerText = `${data.insights.code_structural_match}%`;
+        } else {
+            astAlert.style.display = 'none';
+        }
+
+        // Reveal PDF Download Button
+        document.getElementById('exportPdfBtn').style.display = 'block';
 
         // Multi-Algorithm Breakdown
         animateValue("statCosine", 0, Math.round(data.metrics.cosine), 1000);
@@ -306,16 +338,53 @@ async function runSmartAnalysis() {
         
         document.getElementById('quickStatusLine').innerText = "Scan Complete";
 
-    } catch (e) {
-        alert("Verification failed: " + e.message);
-        document.getElementById('quickStatusLine').innerText = "Error encountered.";
+        // Save Session to User History (Real-world Usability Feature)
+        const hist = JSON.parse(localStorage.getItem('plagix_history')) || [];
+        hist.unshift({
+            date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString(),
+            score: targetScore,
+            words: data.insights.word_count,
+            timeMs: data.insights.time_ms
+        });
+        localStorage.setItem('plagix_history', JSON.stringify(hist.slice(0, 10))); // keep top 10
+        renderHistory();
+
+    } catch (err) {
+        alert("Extraction Failed: " + err.message);
     } finally {
-        // Reset UX
         btn.disabled = false;
         btnText.innerText = "Analyze Similarity";
         btn.style.opacity = '1';
     }
 }
+
+// 5. User History Database Engine
+function renderHistory() {
+    const historyGrid = document.getElementById('historyGrid');
+    if (!historyGrid) return;
+    
+    const hist = JSON.parse(localStorage.getItem('plagix_history')) || [];
+    if (hist.length === 0) {
+        historyGrid.innerHTML = `<div style="text-align: center; padding: 3rem; color: var(--text-muted);">No recent analysis records in your workspace cache.</div>`;
+        return;
+    }
+    
+    historyGrid.innerHTML = hist.map((h, i) => `
+        <div style="background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <p style="font-weight: 700; color: var(--text); font-size: 15px;">Session Record #${hist.length - i}</p>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Scanned ${h.words} words at ${h.date}</p>
+            </div>
+            <div style="text-align: right;">
+                <p style="font-size: 20px; font-weight: 800; color: ${h.score > 75 ? '#ef4444' : h.score > 40 ? '#f59e0b' : '#10b981'};">${h.score}%</p>
+                <p style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Match</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Render history on load
+document.addEventListener('DOMContentLoaded', renderHistory);
 
 // Utility: Number Counter
 function animateValue(id, start, end, duration) {

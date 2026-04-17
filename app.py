@@ -5,16 +5,34 @@ import difflib
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+import PyPDF2
+import docx
+import ast
+
+# Ensure NLTK packages are downloaded
+try:
+    nltk.data.find('corpora/stopwords')
+except:
+    nltk.download('stopwords')
+    nltk.download('wordnet')
+
+lemmatizer = WordNetLemmatizer()
+stop_words = set(stopwords.words('english'))
+
 
 app = Flask(__name__)
 
 # --- Plagiarism Logic ---
 
 def preprocess_text(text):
-    # Basic cleaning: lowercase and punctuation removal
     text = text.lower()
     text = re.sub(r'[^\w\s]', '', text)
-    return text
+    words = text.split()
+    words = [lemmatizer.lemmatize(w) for w in words if w not in stop_words]
+    return " ".join(words)
 
 def calculate_jaccard(str1, str2):
     a = set(str1.split())
@@ -34,6 +52,16 @@ def calculate_cosine(str1, str2):
     except:
         return 0
 
+def get_ast_structure(code):
+    try:
+        tree = ast.parse(code)
+        structure = []
+        for node in ast.walk(tree):
+            structure.append(node.__class__.__name__)
+        return " ".join(structure)
+    except Exception:
+        return None
+
 def highlight_matches(text1, text2):
     # Generates side-by-side highlighted HTML
     words1 = text1.split()
@@ -50,9 +78,17 @@ def highlight_matches(text1, text2):
         w2_chunk = " ".join(words2[j1:j2])
         
         if tag == 'equal':
-            if w1_chunk: hlt1.append(f'<span class="match-highlight">{w1_chunk}</span>')
-            if w2_chunk: hlt2.append(f'<span class="match-highlight">{w2_chunk}</span>')
-            matched_words_count += (i2 - i1)
+            match_len = i2 - i1
+            if match_len > 10:
+                intensity = "high-match"
+            elif match_len > 4:
+                intensity = "mid-match"
+            else:
+                intensity = "low-match"
+                
+            if w1_chunk: hlt1.append(f'<span class="match-highlight {intensity}">{w1_chunk}</span>')
+            if w2_chunk: hlt2.append(f'<span class="match-highlight {intensity}">{w2_chunk}</span>')
+            matched_words_count += match_len
         elif tag == 'replace':
             if w1_chunk: hlt1.append(w1_chunk)
             if w2_chunk: hlt2.append(w2_chunk)
@@ -117,6 +153,13 @@ def get_similarity_report(text1, text2):
     unique_percent = max(100 - (overall_score * 100), 0)
     process_time = time.time() - start_time
     
+    # 💎 WOW Feature: AST Code Plagiarism Check
+    ast1 = get_ast_structure(text1)
+    ast2 = get_ast_structure(text2)
+    code_match = None
+    if ast1 and ast2:
+        code_match = round(calculate_levenshtein(ast1, ast2) * 100)
+
     return {
         "overall_score": overall_score * 100,
         "metrics": {
@@ -128,7 +171,8 @@ def get_similarity_report(text1, text2):
             "word_count": total_words,
             "matched_words": matched_count,
             "unique_percent": unique_percent,
-            "time_ms": round(process_time * 1000)
+            "time_ms": round(process_time * 1000),
+            "code_structural_match": code_match
         },
         "highlights": {
             "text1": t1_highlighted,
@@ -165,6 +209,27 @@ def calculate():
         
     report = get_similarity_report(t1, t2)
     return jsonify(report)
+
+@app.route('/extract_text', methods=['POST'])
+def extract_text():
+    file = request.files.get('file')
+    if not file: return jsonify({"error": "No file"}), 400
+    
+    text = ""
+    filename = file.filename.lower()
+    
+    try:
+        if filename.endswith('.pdf'):
+            pdf = PyPDF2.PdfReader(file)
+            text = " ".join([page.extract_text() for page in pdf.pages])
+        elif filename.endswith('.docx'):
+            doc = docx.Document(file)
+            text = " ".join([p.text for p in doc.paragraphs])
+        else:
+            text = file.read().decode('utf-8', errors='ignore')
+        return jsonify({"text": text})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(port=8000, debug=True)

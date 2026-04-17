@@ -1,16 +1,105 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container hero-section">
-    <div style="max-width: 600px; margin: 6rem auto; text-align: center;">
-        <h1 style="font-size: 4rem; font-weight: 800; letter-spacing: -0.06em; margin-bottom: 1.5rem; line-height: 0.9;">Check similarity with clarity.</h1>
-        <p style="font-size: 1.25rem; color: var(--text-muted); margin-bottom: 3rem; font-weight: 500;">
-            Secure, precise, and professional plagiarism detection for documents and code. Built for integrity.
+<div class="container hero-section" style="min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 1.5rem; animation: heroFadeIn 1s ease-out forwards; opacity: 0;">
+    <div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; align-items: center;">
+        
+        <!-- Optional Batch: SaaS Styling -->
+        <span style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6; padding: 6px 16px; border-radius: 999px; font-size: 13px; font-weight: 700; margin-bottom: 2rem; border: 1px solid rgba(139, 92, 246, 0.2);">
+            AI-powered plagiarism detection ⚡
+        </span>
+
+        <!-- Dynamic Typing Heading -->
+        <h1 style="font-size: clamp(3rem, 5vw, 4.5rem); font-weight: 800; letter-spacing: -0.05em; margin-bottom: 1.5rem; line-height: 1.1; color: var(--text);">
+            Detect plagiarism with <br>
+            <span id="typewriter" style="color: #3b82f6; border-right: 3px solid #3b82f6; padding-right: 4px; animation: blink 0.8s step-end infinite;"></span>
+        </h1>
+        
+        <!-- Improved Subtext -->
+        <p style="font-size: 1.125rem; color: var(--text-muted); margin-bottom: 2.5rem; font-weight: 500; max-width: 600px; line-height: 1.6;">
+            Advanced similarity detection for documents and code. <br>Built for accuracy, speed, and real-world usage.
         </p>
+        
+        <!-- Micro-interaction Buttons -->
         <div style="display: flex; gap: 1rem; justify-content: center;">
-            <a href="/dashboard" class="btn btn-primary" style="padding: 14px 28px; font-size: 16px;">Get Started</a>
-            <a href="/auth" class="btn" style="padding: 14px 28px; font-size: 16px;">Sign In</a>
+            <a href="/dashboard" class="btn btn-primary hero-btn">Get Started</a>
+            <a href="/auth" class="btn hero-btn-secondary">Sign In</a>
         </div>
     </div>
 </div>
+
+<style>
+/* Cursor Blinking Logic */
+@keyframes blink {
+    from, to { border-color: transparent }
+    50% { border-color: #3b82f6; }
+}
+/* Framer Motion equivalent fade up */
+@keyframes heroFadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Button Upgrades matching Shadcn */
+.hero-btn {
+    padding: 14px 32px; 
+    font-size: 16px; 
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+    transform-origin: center;
+}
+.hero-btn:hover {
+    transform: scale(1.03);
+}
+
+.hero-btn-secondary {
+    padding: 14px 32px; 
+    font-size: 16px; 
+    border: 1px solid var(--border); 
+    background: transparent;
+    transition: background-color 0.2s ease;
+}
+.hero-btn-secondary:hover {
+    background: var(--card);
+}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    // Typewriter Native Component Logic
+    const words = ["clarity.", "precision.", "confidence.", "intelligence."];
+    let wordIndex = 0;
+    let charIndex = 0;
+    let isDeleting = false;
+    const typingElement = document.getElementById("typewriter");
+    
+    function typeEffect() {
+        const currentString = words[wordIndex];
+        
+        if (isDeleting) {
+            typingElement.textContent = currentString.substring(0, charIndex - 1);
+            charIndex--;
+        } else {
+            typingElement.textContent = currentString.substring(0, charIndex + 1);
+            charIndex++;
+        }
+        
+        // Dynamic Speeds defining Shadcn UX
+        let typeSpeed = isDeleting ? 40 : 60;
+        
+        if (!isDeleting && charIndex === currentString.length) {
+            typeSpeed = 1500; // Pause at end of word
+            isDeleting = true;
+        } else if (isDeleting && charIndex === 0) {
+            isDeleting = false;
+            wordIndex = (wordIndex + 1) % words.length;
+            typeSpeed = 500; // Pause before new word
+        }
+        
+        setTimeout(typeEffect, typeSpeed);
+    }
+    
+    // Boot sequence delay
+    setTimeout(typeEffect, 500); 
+});
+</script>
 {% endblock %}

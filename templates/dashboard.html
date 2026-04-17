@@ -29,9 +29,9 @@
             <!-- Premium Feature: Drag & Drop + Browse Zone -->
             <div class="drag-drop-zone card" id="dropZone" style="text-align: center; margin-bottom: 24px; padding: 2rem; border-style: dashed; cursor: pointer;">
                 <p style="font-weight: 600; color: var(--text);">Drop files here or <span style="color: #3b82f6; text-decoration: underline;">click to browse</span></p>
-                <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Supports .txt, .md, .py</p>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Supports .pdf, .docx, .txt</p>
                 <!-- Hidden file input for manual browse -->
-                <input type="file" id="fileUpload" multiple accept=".txt,.md,.py" style="display: none;">
+                <input type="file" id="fileUpload" multiple accept=".pdf,.docx,.txt,.md,.py" style="display: none;">
             </div>
 
             <!-- Document Input Section -->
@@ -49,21 +49,38 @@
             <!-- Analyze Bar -->
             <div class="card" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2rem; margin-bottom: 24px;">
                 <div style="display: flex; align-items: center; gap: 1rem;">
-                    <button class="btn btn-magnetic" id="analyzeBtn" onclick="runSmartAnalysis()" style="min-width: 180px;">
-                        <span id="btnText">Analyze Similarity</span>
-                    </button>
                     <span id="typingIndicator" style="font-size: 13px; color: var(--text-muted); opacity: 0; transition: opacity 0.2s;">Analyzing...</span>
                 </div>
-                <div id="quickStatusLine" style="font-size: 14px; font-weight: 600; color: var(--text-muted);">Ready</div>
+                <!-- Analysis Button Array -->
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn btn-primary" id="analyzeBtn" style="flex: 1;" onclick="runSmartAnalysis()">
+                        <span id="analyzeBtnText">Analyze Similarity</span>
+                    </button>
+                    <button class="btn btn-secondary" id="exportPdfBtn" style="display: none;" onclick="window.print()">
+                        <span>Download PDF Report</span>
+                    </button>
+                </div>
             </div>
 
-            <!-- Insights & Result Panel -->
+            <!-- RESULT PANEL -->
             <div id="resultsContainer" style="display: none; flex-direction: column; gap: 24px;">
+                
+                <!-- AST Code Structure Alert (Dynamic) -->
+                <div id="codeStructureAlert" class="card" style="display: none; background: rgba(139, 92, 246, 0.1); border-left: 4px solid #8b5cf6;">
+                    <p style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #8b5cf6; margin-bottom: 4px;">Code Plagiarism Detected</p>
+                    <p style="color: var(--text); font-size: 14px; font-weight: 500;">
+                        Function structures share an exact underlying AST overlap of <span id="codeStructureScore" style="font-weight: 800; color: #8b5cf6;"></span>. Obfuscation techniques bypassed.
+                    </p>
+                </div>
+
                 <!-- Main Result -->
-                <div class="card" style="text-align: center; padding: 3rem;">
-                    <h3 id="resultStatus" style="font-size: 18px; font-weight: 700; margin-bottom: 1rem; color: var(--text);">Result Pending</h3>
-                    <div style="font-size: 4rem; font-weight: 800; line-height: 1; letter-spacing: -0.05em; color: var(--text); margin-bottom: 2rem;">
-                        <span id="bigScore">0</span><span style="font-size: 2rem; color: var(--text-muted);">%</span>
+                <div class="card" style="display: flex; align-items: center; justify-content: space-between; padding: 2rem;">
+                    <div>
+                        <p style="font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">Overall Similarity</p>
+                        <h2 style="font-size: 4rem; font-weight: 800; line-height: 1; margin: 0; color: var(--text);"><span id="bigScore">0</span>%</h2>
+                        <p id="resultStatus" style="font-weight: 600; font-size: 1.1rem; margin-top: 8px; color: var(--text-muted);">Analyzing...</p>
+                        <!-- AI Explanation Banner -->
+                        <p id="explainSimilarityText" style="font-size: 13px; color: var(--text-muted); font-style: italic; margin-top: 12px;"></p>
                     </div>
                     <!-- Progress Bar -->
                     <div style="width: 100%; max-width: 400px; height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; margin: 0 auto;">
@@ -143,10 +160,13 @@
         <div class="main-view-content" id="view-history" style="display: none;">
             <div style="margin-bottom: 3rem;">
                 <h1 style="font-size: 2.5rem; font-weight: 800; letter-spacing: -0.05em; margin-bottom: 0.5rem;">Scan History</h1>
-                <p style="color: var(--text-muted); font-size: 1rem;">Review past plagiarism environments.</p>
+                <p style="color: var(--text-muted); font-size: 1rem;">Review previously triggered batch scans and document analyses.</p>
             </div>
-            <div class="card" style="text-align: center; padding: 4rem 2rem;">
-                <h3 style="color: var(--text-muted);">No recent scans found.</h3>
+            
+            <div class="card">
+                <div id="historyGrid" style="display: flex; flex-direction: column; gap: 16px;">
+                    <!-- Auto Populated by LocalStorage JS -->
+                </div>
             </div>
         </div>
 
